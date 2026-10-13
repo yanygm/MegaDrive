@@ -1,0 +1,78 @@
+{
+  "settings": [
+    {
+      "id": 0,
+      "label": "Reset Core",
+      "address": "0x2000",
+      "type": "action",
+      "value": 1
+    },
+    {
+      "id": 1,
+      "label": "Region",
+      "address": "0x0",
+      "mask": "0xFFFFFFFC",
+      "default": "0x1",
+      "type": "list",
+      "items": [
+        { "label": "Auto", "value": "0x1" },
+        { "label": "NTSC", "value": 0 },
+        { "label": "PAL", "value": "0x2" }
+      ]
+    },
+    {
+      "id": 2,
+      "label": "Japanese",
+      "address": "0x0",
+      "mask": "0xFFFFFFFB",
+      "default": 0,
+      "type": "checkbox",
+      "value": 4
+    },
+    {
+      "id": 3,
+      "label": "Blend",
+      "address": "0x0",
+      "mask": "0xFFFFFFF7",
+      "default": 0,
+      "type": "checkbox",
+      "value": 8
+    },
+    {
+      "id": 4,
+      "label": "6-Button Pad",
+      "address": "0x0",
+      "mask": "0xFFFFFFEF",
+      "default": 0,
+      "type": "checkbox",
+      "value": 16
+    },
+    {
+      "id": 5,
+      "label": "Master System",
+      "address": "0x0",
+      "mask": "0xFFFFFFDF",
+      "default": 0,
+      "type": "checkbox",
+      "value": 32
+    },
+    {
+      "id": 6,
+      "label": "Border",
+      "address": "0x0",
+      "mask": "0xFFFFFFBF",
+      "default": 0,
+      "type": "checkbox",
+      "value": 64
+    },
+    {
+      "id": 7,
+      "label": "CRAM Dots",
+      "address": "0x0",
+      "mask": "0xFFFFFF7F",
+      "default": 0,
+      "type": "checkbox",
+      "value": 128
+    }
+  ]
+}

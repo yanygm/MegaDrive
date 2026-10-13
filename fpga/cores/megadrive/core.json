@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "id": "jeremy.MEGADRIVE",
+    "name": "Mega Drive",
+    "author": "jeremy"
+  },
+  "bitstreams": [
+    { "target": "gamebub_rev4", "filename": "megadrive_rev4.bit" }
+  ],
+  "hardware": {
+    "cartridge_enable": "no"
+  }
+}

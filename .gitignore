@@ -1,0 +1,23 @@
+# Mill / coursier generated output
+fpga/out/
+fpga/build/
+fpga/build.log
+.mill*
+.bsp/
+.metals/
+target/
+*.class
+
+# Local Vivado / synthesis artifacts
+*.bit
+*.bit.hs
+*.jou
+*.log
+*.str
+*.dcp
+*.xpr
+.nav/
+__pycache__/
+
+# macOS
+.DS_Store

@@ -1,0 +1,84 @@
+name: Build MegaDrive Core
+
+# Automated build for the Game Bub MegaDrive/Genesis core.
+#
+# What runs here (on GitHub-hosted Linux):
+#   * Chisel -> SystemVerilog elaboration via mill + CIRCT/firtool.
+#   * The generated .sv files (HandheldMegadrive.sv, HandheldTop.sv, ...) and
+#     filelist.f are uploaded as the `megadrive-sv` artifact.
+#
+# What does NOT run here:
+#   * The final Vivado bitstream synthesis. Vivado is proprietary (x86_64 Linux
+#     only, needs a license) and cannot run on GitHub-hosted runners. See the
+#     `synthesize` job below for how to run it on a self-hosted runner that has
+#     Vivado 2025.1 (ML Standard, Artix-7) installed.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  elaborate:
+    name: Elaborate Chisel -> SystemVerilog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache mill / coursier
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/mill
+            ~/.cache/coursier
+            fpga/out
+          key: mill-${{ hashFiles('fpga/build.mill', 'fpga/framework/package.mill') }}
+          restore-keys: |
+            mill-
+
+      - name: Elaborate MegaDrive core
+        working-directory: fpga
+        run: ./mill -i root.runMain platform.handheld.HandheldTop net.gamebub.core.megadrive.HandheldMegadrive 4 --target-dir=build/mega
+
+      - name: Upload SystemVerilog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: megadrive-sv
+          path: fpga/build/mega
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Full bitstream synthesis (Vivado). Disabled by default because it needs a
+  # self-hosted runner with Vivado installed. To enable:
+  #   1. Register a self-hosted runner labelled `vivado` (Linux x86_64).
+  #   2. Install Vivado 2025.1 ML Standard (includes Artix-7) and set
+  #      XILINX_VIVADO, plus a valid license (XILINXD_LICENSE_FILE).
+  #   3. Remove the `if: false` line below.
+  # ---------------------------------------------------------------------------
+  synthesize:
+    name: Synthesize bitstream (Vivado, self-hosted)
+    runs-on: [self-hosted, vivado]
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build bitstream
+        working-directory: fpga
+        env:
+          XILINX_VIVADO: /opt/Xilinx/Vivado/2025.1
+        run: |
+          python3 -m pip install --user edalize heatshrink2 || true
+          python3 scripts/build_core.py \
+            --target gamebub_rev4 \
+            --name megadrive \
+            --core-class net.gamebub.core.megadrive.HandheldMegadrive \
+            --build-root build/mega
+      - uses: actions/upload-artifact@v4
+        with:
+          name: megadrive-bitstream
+          path: fpga/build/mega/megadrive.bit*
