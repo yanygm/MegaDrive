@@ -2,16 +2,17 @@ name: Build MegaDrive Core
 
 # Automated build for the Game Bub MegaDrive/Genesis core.
 #
-# What runs here (on GitHub-hosted Linux):
-#   * Chisel -> SystemVerilog elaboration via mill + CIRCT/firtool.
-#   * The generated .sv files (HandheldMegadrive.sv, HandheldTop.sv, ...) and
-#     filelist.f are uploaded as the `megadrive-sv` artifact.
+# Two jobs:
+#   * `elaborate`  (GitHub-hosted, ubuntu-latest): Chisel -> SystemVerilog via
+#     mill + CIRCT/firtool. Produces the `megadrive-sv` artifact (.sv + filelist.f).
+#   * `synthesize` (SELF-HOSTED runner labelled `vivado`): runs Vivado to turn
+#     the elaborated .sv + the MiSTer Nuked-MD netlist (main.v) into the
+#     `megadrive-bitstream` artifact (megadrive.bit / megadrive.bit.hs).
 #
-# What does NOT run here:
-#   * The final Vivado bitstream synthesis. Vivado is proprietary (x86_64 Linux
-#     only, needs a license) and cannot run on GitHub-hosted runners. See the
-#     `synthesize` job below for how to run it on a self-hosted runner that has
-#     Vivado 2025.1 (ML Standard, Artix-7) installed.
+# The .bit CANNOT be produced on GitHub-hosted runners because Vivado is
+# proprietary (x86_64 Linux only, needs a license). Register a self-hosted
+# runner with Vivado 2025.1 ML Standard (Artix-7) installed and labelled
+# `vivado`; see the `synthesize` job notes below.
 
 on:
   push:
@@ -54,31 +55,55 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  # Full bitstream synthesis (Vivado). Disabled by default because it needs a
-  # self-hosted runner with Vivado installed. To enable:
-  #   1. Register a self-hosted runner labelled `vivado` (Linux x86_64).
-  #   2. Install Vivado 2025.1 ML Standard (includes Artix-7) and set
-  #      XILINX_VIVADO, plus a valid license (XILINXD_LICENSE_FILE).
-  #   3. Remove the `if: false` line below.
+  # Full bitstream synthesis (Vivado). Runs ONLY on a SELF-HOSTED runner, because
+  # Vivado is proprietary (x86_64 Linux only, needs a license) and cannot run on
+  # GitHub-hosted runners.
+  #
+  # One-time setup:
+  #   1. Provision an x86_64 Linux machine with Vivado 2025.1 ML Standard
+  #      (includes Artix-7) installed, plus a valid license
+  #      (set XILINXD_LICENSE_FILE on the runner).
+  #   2. Register it as a GitHub self-hosted runner for this repo:
+  #        https://github.com/yanygm/MegaDrive/settings/actions/runners/new
+  #      when prompted for labels, add:  vivado
+  #      (or edit `runs-on` below to match your runner's label).
+  #   3. On that machine, set XILINX_VIVADO (e.g. /opt/Xilinx/Vivado/2025.1).
+  #      This workflow reads it from the repo Variable `XILINX_VIVADO`, falling
+  #      back to /opt/Xilinx/Vivado/2025.1.
+  #
+  # Once the labelled runner is online, every push to `main` (or a manual
+  # workflow_dispatch) runs this job and uploads megadrive.bit / megadrive.bit.hs.
+  # If no such runner exists, the job simply stays queued.
   # ---------------------------------------------------------------------------
   synthesize:
-    name: Synthesize bitstream (Vivado, self-hosted)
+    name: Synthesize bitstream (.bit) — Vivado, self-hosted
     runs-on: [self-hosted, vivado]
-    if: false
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Python build deps
+        run: python3 -m pip install --user edalize heatshrink2
+
       - name: Build bitstream
         working-directory: fpga
         env:
-          XILINX_VIVADO: /opt/Xilinx/Vivado/2025.1
+          XILINX_VIVADO: ${{ vars.XILINX_VIVADO || '/opt/Xilinx/Vivado/2025.1' }}
         run: |
-          python3 -m pip install --user edalize heatshrink2 || true
           python3 scripts/build_core.py \
             --target gamebub_rev4 \
             --name megadrive \
             --core-class net.gamebub.core.megadrive.HandheldMegadrive \
             --build-root build/mega
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload bitstream artifact
+        uses: actions/upload-artifact@v4
         with:
           name: megadrive-bitstream
           path: fpga/build/mega/megadrive.bit*
+          if-no-files-found: error

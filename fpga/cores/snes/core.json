@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "id": "jeremy.SNES",
+    "name": "Super Nintendo",
+    "author": "jeremy"
+  },
+  "bitstreams": [
+    { "target": "gamebub_rev4", "filename": "snes_rev4.bit" }
+  ],
+  "hardware": {
+    "cartridge_enable": "no"
+  }
+}
